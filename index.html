@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Elevación - Rifle PCP + DiscoveryOpt HT</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0f7fa, #f5f5f5);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #0277bd;
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+        .subtitle {
+            color: #546e7a;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        label {
+            display: block;
+            margin: 15px 0 8px;
+            font-weight: 600;
+            color: #263238;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #b0bec5;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0277bd;
+        }
+        #resultado {
+            margin-top: 25px;
+            padding: 20px;
+            background-color: #e1f5fe;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #01579b;
+            display: none;
+            border: 1px solid #b3e5fc;
+        }
+        .info {
+            font-size: 13px;
+            color: #607d8b;
+            margin-top: 15px;
+            line-height: 1.4;
+        }
+        .highlight {
+            background-color: #fff8e1;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Calculadora de Elevación para Caza de Aves</h1>
+        <div class="subtitle">Rifle PCP + Mira DiscoveryOpt HT 4-16x40SF</div>
+
+        <label for="distancia">Distancia al ave (metros):</label>
+        <input type="number" id="distancia" min="5" max="70" step="1" placeholder="Ej. 35">
+
+        <button onclick="calcularClics()">Calcular Clics de Elevación</button>
+
+        <div id="resultado"></div>
+
+        <div class="info">
+            <p>✅ Basado en trayectoria típica de rifle PCP (.177 o .22) con munición estándar (8.44 gr).</p>
+            <p>✅ La mira <span class="highlight">DiscoveryOpt HT</span> tiene <span class="highlight">1/4 MOA por clic</span> (≈0.7 cm a 100 m).</p>
+            <p>✅ Punto de impacto cero a <span class="highlight">30 metros</span>.</p>
+        </div>
+    </div>
+
+    <script>
+        // Datos de caída típica en cm respecto al punto de mira (cero a 30m)
+        // Valores estimados para PCP con plomos de 8.44gr a ~240 m/s
+        const datosBalisticos = [
+            { distancia: 10, caida: -3.0 },
+            { distancia: 15, caida: -1.8 },
+            { distancia: 20, caida: -0.9 },
+            { distancia: 25, caida: -0.3 },
+            { distancia: 30, caida: 0.0 },
+            { distancia: 35, caida: -0.4 },
+            { distancia: 40, caida: -1.2 },
+            { distancia: 45, caida: -2.5 },
+            { distancia: 50, caida: -4.3 },
+            { distancia: 55, caida: -6.8 },
+            { distancia: 60, caida: -10.0 },
+            { distancia: 65, caida: -14.0 },
+            { distancia: 70, caida: -18.8 }
+        ];
+
+        function interpolar(distancia) {
+            // Si está fuera del rango
+            if (distancia <= datosBalisticos[0].distancia) {
+                return datosBalisticos[0].caida;
+            }
+            if (distancia >= datosBalisticos[datosBalisticos.length - 1].distancia) {
+                return datosBalisticos[datosBalisticos.length - 1].caida;
+            }
+
+            // Buscar segmento para interpolación lineal
+            for (let i = 0; i < datosBalisticos.length - 1; i++) {
+                const d1 = datosBalisticos[i].distancia;
+                const d2 = datosBalisticos[i + 1].distancia;
+                if (distancia >= d1 && distancia <= d2) {
+                    const c1 = datosBalisticos[i].caida;
+                    const c2 = datosBalisticos[i + 1].caida;
+                    const t = (distancia - d1) / (d2 - d1);
+                    return c1 + t * (c2 - c1);
+                }
+            }
+            return 0;
+        }
+
+        function calcularClics() {
+            const distanciaInput = parseFloat(document.getElementById('distancia').value);
+            const resultadoDiv = document.getElementById('resultado');
+
+            if (isNaN(distanciaInput) || distanciaInput < 5 || distanciaInput > 70) {
+                alert('Por favor, ingrese una distancia válida entre 5 y 70 metros.');
+                resultadoDiv.style.display = 'none';
+                return;
+            }
+
+            // Obtener caída en cm
+            const caida = interpolar(distanciaInput); // en cm
+
+            // La mira DiscoveryOpt HT: 1/4 MOA por clic
+            // 1 MOA ≈ 2.908 cm a 100 m → 1/4 MOA ≈ 0.727 cm a 100 m
+            // Pero como trabajamos a "distancia" metros, 1 clic = (0.727 * distancia / 100) cm
+            const cmPorClic = (0.727 * distanciaInput) / 100;
+
+            // Corrección necesaria: si la bala cae -5 cm, debo subir 5 cm → clics = 5 / cmPorClic
+            const correccionCm = -caida; // positivo si hay que subir
+            const clics = correccionCm / cmPorClic;
+
+            // Mostrar resultado
+            resultadoDiv.innerHTML = `
+                <p>🎯 Distancia: <strong>${distanciaInput} m</strong></p>
+                <p>📉 Caída estimada: <strong>${caida.toFixed(2)} cm</strong></p>
+                <p>⚙️ <strong>${clics.toFixed(1)} clics</strong> de elevación</p>
+                <p style="font-size:14px; margin-top:10px; color:#0288d1;">
+                    Gire la torreta hacia <strong>arriba</strong> (${clics < 0 ? 'abajo' : 'arriba'})
+                </p>
+            `;
+            resultadoDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
